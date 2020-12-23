@@ -8,13 +8,11 @@ import (
 	sc "iot_admin/sqlx_client"
 )
 
-
-
-func main(){
-	log.InitLog2(1)
+func main() {
+	log.InitLog2(0)
 	config.SetUp()
 	sc.SetUp()
-	r:=router.NewRouter()
+	r := router.NewRouter()
 	gin.SetMode(config.Conf.RunMode)
-	_=r.Run(config.Conf.AdminHost+":"+config.Conf.AdminPort)
+	_ = r.Run(config.Conf.AdminHost + ":" + config.Conf.AdminPort)
 }

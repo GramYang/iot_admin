@@ -95,7 +95,7 @@ func checkCookie(c *gin.Context) (*loginState, error) {
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
-	r.Use(cors())
+	//r.Use(cors())
 	loginCache = cache.New(20*time.Hour, 24*time.Hour)
 	LoginRouter(r, "")
 	DeviceRouter(r, "/operations/device")
