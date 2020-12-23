@@ -14,8 +14,8 @@ import (
 var loginCache *cache.Cache
 
 const (
-	KEY="123456789"
-	COOKIEKEY="iot_admin_cookie"
+	KEY       = "123456789"
+	COOKIEKEY = "iot_admin_cookie"
 )
 
 //跨域中间件
@@ -40,9 +40,9 @@ func cors() gin.HandlerFunc {
 			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, If-Modified-Since, Cache-Control, Content-Type, Pragma,Cookie,signature")
 			//              允许跨域设置                                                                                                      可以返回其他子段
 			c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,Cache-Control,Content-Language,Content-Type,Content-Disposition,Expires,Last-Modified,Pragma,FooBar") // 跨域关键设置 让浏览器可以解析
-			c.Header("Access-Control-Max-Age", "172800")                                                                                                                                                           // 缓存请求信息 单位为秒
-			c.Header("Access-Control-Allow-Credentials", "true")                                                                                                                                                   //  跨域请求是否需要带cookie信息 默认设置为true
-			c.Set("content-type", "application/json")                                                                                                                                                              // 设置返回格式是json
+			c.Header("Access-Control-Max-Age", "172800")                                                                                                                                                                               // 缓存请求信息 单位为秒
+			c.Header("Access-Control-Allow-Credentials", "true")                                                                                                                                                                       //  跨域请求是否需要带cookie信息 默认设置为true
+			c.Set("content-type", "application/json")                                                                                                                                                                                  // 设置返回格式是json
 		}
 
 		//放行所有OPTIONS方法
@@ -54,51 +54,50 @@ func cors() gin.HandlerFunc {
 	}
 }
 
-type wrap struct{
+type wrap struct {
 	Data []byte `json:"data"`
 }
 
-
 //统一解密rsa
-func unwrapAndDecodeRsa(c *gin.Context) ([]byte,error){
+func unwrapAndDecodeRsa(c *gin.Context) ([]byte, error) {
 	var w wrap
-	err:=c.BindJSON(&w)
-	if err!=nil{
-		return nil,err
+	err := c.BindJSON(&w)
+	if err != nil {
+		return nil, err
 	}
-	if w.Data==nil{
-		return nil,errors.New("empty data")
+	if w.Data == nil {
+		return nil, errors.New("empty data")
 	}
-	data,err:= d.BodyDecodeRSA(w.Data)
-	return data,err
+	data, err := d.BodyDecodeRSADivisional(w.Data)
+	return data, err
 }
 
 //检查签名，只限于get
-func checkSignature(c *gin.Context) error{
-	if c.GetHeader("signature")!= d.Signature {
+func checkSignature(c *gin.Context) error {
+	if c.GetHeader("signature") != d.Signature {
 		return errors.New("wrong signature")
 	}
 	return nil
 }
 
 //检查登录，适用所有非登录接口
-func checkCookie(c *gin.Context) (*loginState,error){
-	cookie,err:=c.Cookie(COOKIEKEY)
-	if err!=nil{
-		return nil,err
+func checkCookie(c *gin.Context) (*loginState, error) {
+	cookie, err := c.Cookie(COOKIEKEY)
+	if err != nil {
+		return nil, err
 	}
-	ls,ok:=loginCache.Get(cookie)
-	if !ok{
-		return nil,errors.New("wrong cookie")
+	ls, ok := loginCache.Get(cookie)
+	if !ok {
+		return nil, errors.New("wrong cookie")
 	}
-	return ls.(*loginState),nil
+	return ls.(*loginState), nil
 }
 
-func NewRouter() *gin.Engine{
-	r:=gin.Default()
+func NewRouter() *gin.Engine {
+	r := gin.Default()
 	r.Use(cors())
-	loginCache=cache.New(20*time.Hour,24*time.Hour)
-	LoginRouter(r,"")
-	DeviceRouter(r,"/operations/device")
+	loginCache = cache.New(20*time.Hour, 24*time.Hour)
+	LoginRouter(r, "")
+	DeviceRouter(r, "/operations/device")
 	return r
 }
