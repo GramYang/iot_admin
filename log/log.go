@@ -13,7 +13,7 @@ func InitLog2(mode int) {
 	case 0:
 		file, err := os.OpenFile("iot_admin_log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			panic("open log file error")
+			panic(err)
 		}
 		g.SetOutput(file)
 	case 1:
