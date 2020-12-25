@@ -2,12 +2,11 @@ package router
 
 import (
 	"errors"
-	"fmt"
+	g "github.com/GramYang/gylog"
 	"github.com/gin-gonic/gin"
 	"github.com/patrickmn/go-cache"
 	d "iot_admin/util/decode"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -23,16 +22,6 @@ func cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		method := c.Request.Method               //请求方法
 		origin := c.Request.Header.Get("Origin") //请求头部
-		var headerKeys []string                  // 声明请求头keys
-		for k, _ := range c.Request.Header {
-			headerKeys = append(headerKeys, k)
-		}
-		headerStr := strings.Join(headerKeys, ", ")
-		if headerStr != "" {
-			headerStr = fmt.Sprintf("access-control-allow-origin, access-control-allow-headers, %s", headerStr)
-		} else {
-			headerStr = "access-control-allow-origin, access-control-allow-headers"
-		}
 		if origin != "" {
 			c.Header("Access-Control-Allow-Origin", origin)                                    // 这是允许访问所有域
 			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE,UPDATE") //服务器支持的所有跨域请求的方法,为了避免浏览次请求的多次'预检'请求
@@ -84,6 +73,7 @@ func checkSignature(c *gin.Context) error {
 func checkCookie(c *gin.Context) (*loginState, error) {
 	cookie, err := c.Cookie(COOKIEKEY)
 	if err != nil {
+		g.Errorln(err)
 		return nil, err
 	}
 	ls, ok := loginCache.Get(cookie)
@@ -95,7 +85,7 @@ func checkCookie(c *gin.Context) (*loginState, error) {
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
-	//r.Use(cors())
+	r.Use(cors())
 	loginCache = cache.New(20*time.Hour, 24*time.Hour)
 	LoginRouter(r, "")
 	DeviceRouter(r, "/operations/device")
