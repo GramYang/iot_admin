@@ -10,7 +10,6 @@ import (
 var Conf = &Config{}
 
 type Config struct {
-	AdminHost     string `json:"admin_host"`
 	AdminPort     string `json:"admin_port"`
 	RunMode       string `json:"run_mode"`
 	MysqlAddr     string `json:"mysql_addr"`
@@ -22,8 +21,7 @@ type Config struct {
 }
 
 func (c *Config) defaultConfig() {
-	c.AdminHost = "127.0.0.1"
-	c.AdminPort = "8086"
+	c.AdminPort = "8084"
 	c.RunMode = "debug"
 	c.MysqlAddr = "106.54.87.204"
 	c.MysqlPort = "3306"

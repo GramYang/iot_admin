@@ -19,5 +19,5 @@ func main() {
 	sc.SetUp()
 	r := router.NewRouter()
 	gin.SetMode(config.Conf.RunMode)
-	_ = r.Run(config.Conf.AdminHost + ":" + config.Conf.AdminPort)
+	_ = r.Run(":" + config.Conf.AdminPort)
 }
