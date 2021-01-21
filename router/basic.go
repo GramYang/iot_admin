@@ -5,6 +5,7 @@ import (
 	g "github.com/GramYang/gylog"
 	"github.com/gin-gonic/gin"
 	"github.com/patrickmn/go-cache"
+	"iot_admin/config"
 	d "iot_admin/util/decode"
 	"net/http"
 	"time"
@@ -85,7 +86,9 @@ func checkCookie(c *gin.Context) (*loginState, error) {
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
-	r.Use(cors())
+	if config.Conf.LocalDebug {
+		r.Use(cors())
+	}
 	loginCache = cache.New(20*time.Hour, 24*time.Hour)
 	LoginRouter(r, "")
 	DeviceRouter(r, "/operations/device")

@@ -3,30 +3,94 @@ package util
 import (
 	"encoding/json"
 	"errors"
+	g "github.com/GramYang/gylog"
 	"sync"
 )
 
 //返回的map，key是deviceId，value是创建设备的json body
-func SplitJSONArrayAndCol(data []byte) (map[int]string, error) {
+func SplitJSONArrayAndCol(data []byte) (map[int]string, map[string]interface{}, error) {
 	var res = map[int]string{}
 	var mapArr []map[string]interface{}
 	_ = json.Unmarshal(data, &mapArr)
-	//检查template的数据是否有整列空填的情况，是否为矩阵
-	rowLength := len(mapArr[0])
-	var tmp int
+	g.Debugln("xlsx map", mapArr)
+	//检查template的数据是否有整col空填的情况
 	for i := 1; i < len(mapArr); i++ {
-		tmp = max(tmp, len(mapArr[i]))
+		if len(mapArr) <= 1 {
+			return nil, nil, errors.New("missing col params")
+		}
 	}
-	if tmp != rowLength {
-		return nil, errors.New("it's not maxtrix")
+	//保存额外的参数，比如秘钥
+	var res1 = map[string]interface{}{}
+	//公共参数提出来，要写入ctwing的请求体
+	var operator, imsi, pskValue string
+	var autoObserver, productId int
+	t := mapArr[0]
+	c := int(t["col"].(float64))
+	//解析公共变量，在col 1中
+	if c == 1 {
+		if t["operator"] != nil {
+			tmp, ok := t["operator"].(string)
+			if ok {
+				operator = tmp
+			}
+		}
+		if t["imsi"] != nil {
+			tmp, ok := t["imsi"].(string)
+			if ok {
+				imsi = tmp
+			}
+		}
+		if t["pskValue"] != nil {
+			tmp, ok := t["pskValue"].(string)
+			if ok {
+				pskValue = tmp
+			}
+		}
+		if t["autoObserver"] != nil {
+			tmp, ok := t["autoObserver"].(int)
+			if ok {
+				autoObserver = tmp
+			}
+		}
+		if t["productId"] != nil {
+			tmp, ok := t["productId"].(float64)
+			if ok {
+				productId = int(tmp)
+			}
+		}
+		//secretKey存入res1
+		if t["secretKey"] != nil {
+			tmp, ok := t["secretKey"].(string)
+			if ok {
+				res1["secretKey"] = tmp
+				delete(t, "secretKey")
+			}
+		}
 	}
 	for k, v := range mapArr {
 		c := int(v["col"].(float64))
 		delete(mapArr[k], "col")
+		if operator != "" {
+			v["operator"] = operator
+		}
+		if imsi != "" {
+			v["imsi"] = imsi
+		}
+		if pskValue != "" {
+			v["pskValue"] = pskValue
+		}
+		if autoObserver != 0 {
+			v["autoObserver"] = autoObserver
+		}
+		if productId != 0 {
+			v["productId"] = productId
+		}
 		data, _ := json.Marshal(v)
 		res[c] = string(data)
 	}
-	return res, nil
+	g.Debugln("xlsx result", res)
+	g.Debugln("xlsx result1", res1)
+	return res, res1, nil
 }
 
 func max(a, b int) int {
@@ -77,14 +141,23 @@ func ConcurrentOpt1(m *ConMap, params map[int]string, f func(body string) *Respo
 	wg.Wait()
 }
 
-//有两个ConMap，从m1中抽取信息f处理后去写入m2，请求参数容器是一个slice，回调函数参数是一个map
-func ConcurrentOpt2(m1 *ConMap, params []int, f func(col int, params map[string]interface{})) {
+//m1是并发请求结果，params是创建成功的设备信息col号数组，paraMap是额外的数据（比如要本地保存的设备秘钥，可以为空）
+func ConcurrentOpt2(m1 *ConMap, params []int, paraMap map[string]interface{}, f func(col int, params map[string]interface{})) {
 	var wg sync.WaitGroup
+	add := false
+	if len(paraMap) > 0 {
+		add = true
+	}
 	for _, v := range params {
 		v1 := v
 		rw := m1.Get(v1)
 		var mapRes map[string]interface{}
 		_ = json.Unmarshal([]byte(rw.Body), &mapRes)
+		if add {
+			for k, v := range paraMap {
+				mapRes[k] = v
+			}
+		}
 		wg.Add(1)
 		go func() {
 			f(v1, mapRes)

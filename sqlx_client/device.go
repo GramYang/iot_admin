@@ -32,6 +32,7 @@ type DeviceDetail struct {
 	OnlineAt        int64  `json:"onlineAt" db:"online_at"`
 	OfflineAt       int64  `json:"offlineAt" db:"offline_at"`
 	ProductProtocol int    `json:"productProtocol" db:"product_protocol"`
+	SecretKey       string `json:"secretKey" db:"secret_key"`
 }
 
 type CreateDeviceDetail struct {
@@ -48,7 +49,7 @@ func SaveDevice(pid, did string) error {
 	return err
 }
 
-func SaveDeviceDetail(data []byte) error {
+func SaveDeviceDetail(data []byte, para ...string) error {
 	mapRes := map[string]interface{}{}
 	err := json.Unmarshal(data, &mapRes)
 	if err != nil {
@@ -87,6 +88,9 @@ func SaveDeviceDetail(data []byte) error {
 	} else {
 		mapRes1["offlineAt"] = now
 	}
+	if len(para) > 0 {
+		mapRes1["secretKey"] = para[0]
+	}
 	data1, err := json.Marshal(&mapRes1)
 	if err != nil {
 		return err
@@ -101,16 +105,16 @@ func SaveDeviceDetail(data []byte) error {
 	_, err = db.NamedExec("insert into device_detail(device_sn,device_id,device_name,device_model,"+
 		"manufacturer_id,tenant_id,product_id,imei,imsi,firmware_version,device_version,device_status,"+
 		"auto_observer,create_time,create_by,update_time,update_by,active_time,logout_time,online_at,"+
-		"offline_at,product_protocol) "+
+		"offline_at,product_protocol,secret_key) "+
 		"values(:device_sn,:device_id,:device_name,:device_model,:manufacturer_id,:tenant_id,:product_id,"+
 		":imei,:imsi,:firmware_version,:device_version,:device_status,:auto_observer,"+
 		"from_unixtime(:create_time),:create_by,from_unixtime(:update_time),:update_by,"+
 		"from_unixtime(:active_time),from_unixtime(:logout_time),from_unixtime(:online_at),"+
-		"from_unixtime(:offline_at),:product_protocol)", &dd)
+		"from_unixtime(:offline_at),:product_protocol,:secret_key)", &dd)
 	return err
 }
 
-//根据设备名称查询，如果置空则返回全部设备，分页
+//根据设备名称查询，如果置空则返回全部设备，分页。这里就不返回密钥了，密钥专门用一个接口返回。
 func QueryDeviceByName(name, pageNow string) ([]DeviceDetail, error) {
 	var dds = []DeviceDetail{}
 	p, _ := strconv.Atoi(pageNow)
@@ -124,8 +128,7 @@ func QueryDeviceByName(name, pageNow string) ([]DeviceDetail, error) {
 			"unix_timestamp(create_time) as create_time,create_by,unix_timestamp(update_time) as update_time,"+
 			"update_by,unix_timestamp(active_time) as active_time,unix_timestamp(logout_time) as logout_time,"+
 			"unix_timestamp(online_at) as online_at,unix_timestamp(offline_at) as offline_at,product_protocol "+
-			"from device_detail where device_name=? order by id desc limit ?,?",
-			name, (p-1)*10, p*10)
+			"from device_detail where device_name=?", name, (p-1)*10, p*10)
 		dds = append(dds, dd)
 		return dds, err
 	} else {
@@ -134,8 +137,7 @@ func QueryDeviceByName(name, pageNow string) ([]DeviceDetail, error) {
 			"unix_timestamp(create_time) as create_time,create_by,unix_timestamp(update_time) as update_time,"+
 			"update_by,unix_timestamp(active_time) as active_time,unix_timestamp(logout_time) as logout_time,"+
 			"unix_timestamp(online_at) as online_at,unix_timestamp(offline_at) as offline_at,product_protocol "+
-			"from device_detail order by id desc limit ?,?",
-			(p-1)*10, p*10)
+			"from device_detail order by id desc limit ?,?", (p-1)*10, p*10)
 		return dds, err
 	}
 }

@@ -60,7 +60,25 @@ func DeviceCreate(c *gin.Context) {
 		})
 		return
 	}
-	resp, err := ct.CreateDevice(string(data))
+	mapResult1 := map[string]interface{}{}
+	err = json.Unmarshal(data, &mapResult1)
+	if err != nil {
+		g.Errorln(err)
+		c.JSON(400, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+	var secretKey string
+	if mapResult1["secretKey"] != nil {
+		tmp, ok := mapResult1["secretKey"].(string)
+		if ok {
+			secretKey = tmp
+		}
+		delete(mapResult1, "secretKey")
+	}
+	data1, _ := json.Marshal(mapResult1)
+	resp, err := ct.CreateDevice(data1)
 	if err != nil {
 		g.Errorln(err)
 		c.JSON(500, gin.H{
@@ -107,7 +125,7 @@ func DeviceCreate(c *gin.Context) {
 	if resp1.StatusCode == 200 {
 		bodyStr1, _ := ioutil.ReadAll(resp1.Body)
 		//这里失败了没关系，还可以补充
-		err = sc.SaveDeviceDetail(bodyStr1)
+		err = sc.SaveDeviceDetail(bodyStr1, secretKey)
 		if err != nil {
 			g.Errorln(err.Error())
 		}
@@ -135,7 +153,7 @@ func DevicesTemplateCreate(c *gin.Context) {
 	}
 	g.Debugln("template raw json: ", string(data))
 	//拆分json数组，获取json请求体和其int列号
-	jsonMap, err := util.SplitJSONArrayAndCol(data)
+	jsonMap, jsonMap1, err := util.SplitJSONArrayAndCol(data)
 	if err != nil {
 		g.Errorln("SplitJSONArrayAndCol", err)
 		c.JSON(400, gin.H{
@@ -148,7 +166,7 @@ func DevicesTemplateCreate(c *gin.Context) {
 	g.Debugln("template parse map: ", jsonMap)
 	util.ConcurrentOpt1(m, jsonMap, func(body string) *util.ResponseWrap {
 		rw := &util.ResponseWrap{}
-		resp, err := ct.CreateDevice(body)
+		resp, err := ct.CreateDevice([]byte(body))
 		if err != nil {
 			rw.Err = err
 		}
@@ -168,16 +186,19 @@ func DevicesTemplateCreate(c *gin.Context) {
 		//网络请求出错
 		if v.Err != nil {
 			errResult[k] = v.Err.Error()
+			continue
 		}
 		//网络请求返回非200
 		if v.Status != 200 {
 			errResult[k] = v.Body
+			continue
 		}
 		//网络请求成功，但是设备创建失败
 		tmpMap := map[string]interface{}{}
 		_ = json.Unmarshal([]byte(v.Body), &tmpMap)
-		if tmpMap["code"] != 0 {
+		if int(tmpMap["code"].(float64)) != 0 {
 			errResult[k] = v.Body
+			continue
 		}
 		successArr = append(successArr, k)
 	}
@@ -198,7 +219,7 @@ func DevicesTemplateCreate(c *gin.Context) {
 	if len(successArr) == 0 {
 		return
 	}
-	util.ConcurrentOpt2(m, successArr, func(col int, params map[string]interface{}) {
+	util.ConcurrentOpt2(m, successArr, jsonMap1, func(col int, params map[string]interface{}) {
 		if int(params["code"].(float64)) != 0 {
 			g.Debugln("col " + strconv.Itoa(col) + " create error")
 			return
@@ -207,6 +228,13 @@ func DevicesTemplateCreate(c *gin.Context) {
 		//创建设备返回的信息并不完整，需要查询
 		pid := strconv.Itoa(int(params["result"].(map[string]interface{})["productId"].(float64)))
 		did := params["result"].(map[string]interface{})["deviceId"].(string)
+		var secretKey string
+		if params["secretKey"] != nil {
+			tmp, ok := params["secretKey"].(string)
+			if ok {
+				secretKey = tmp
+			}
+		}
 		g.Debugln("SaveDevice: ", pid, did)
 		//只保存pid和did
 		err = sc.SaveDevice(pid, did)
@@ -225,7 +253,7 @@ func DevicesTemplateCreate(c *gin.Context) {
 			bodyStr1, _ := ioutil.ReadAll(resp1.Body)
 			//这里失败了没关系，还可以补充
 			g.Debugln("SaveDeviceDetail: ", string(bodyStr1))
-			err = sc.SaveDeviceDetail(bodyStr1)
+			err = sc.SaveDeviceDetail(bodyStr1, secretKey)
 			if err != nil {
 				g.Errorln("SaveDeviceDetail: ", err.Error())
 			}

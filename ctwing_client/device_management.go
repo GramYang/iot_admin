@@ -22,9 +22,9 @@ type other struct {
 	PskValue     string `json:"pskValue"`
 }
 
-func CreateDevice(body string) (*http.Response, error) {
+func CreateDevice(body []byte) (*http.Response, error) {
 	var d device
-	_ = json.Unmarshal([]byte(body), &d)
+	_ = json.Unmarshal(body, &d)
 	g.Debugln("create device body: ", d)
 	data, _ := json.Marshal(&d)
 	return aep.CreateDevice(AppKey, AppSecret, MasterKey, string(data))

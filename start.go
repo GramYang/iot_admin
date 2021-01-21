@@ -9,8 +9,13 @@ import (
 )
 
 func main() {
-	log.InitLog2(0)
 	config.SetUp()
+	if config.Conf.LocalDebug {
+		log.InitLog2(1)
+	} else { //log输出到文件，取消debug信息
+		log.InitLog2(0)
+		log.IsDebug(false)
+	}
 	sc.SetUp()
 	r := router.NewRouter()
 	gin.SetMode(config.Conf.RunMode)

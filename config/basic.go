@@ -18,6 +18,7 @@ type Config struct {
 	MysqlUserName string `json:"mysql_username"`
 	MysqlPassword string `json:"mysql_password"`
 	MysqlDatabase string `json:"mysql_database"`
+	LocalDebug    bool   `json:"local_debug"`
 }
 
 func (c *Config) defaultConfig() {
@@ -29,6 +30,7 @@ func (c *Config) defaultConfig() {
 	c.MysqlUserName = "cqdq"
 	c.MysqlPassword = "cqdq12345"
 	c.MysqlDatabase = "iot_admin"
+	c.LocalDebug = true
 }
 
 func (c *Config) initConfig(path string) {
@@ -36,12 +38,13 @@ func (c *Config) initConfig(path string) {
 	if path != "" {
 		file, err := ioutil.ReadFile(path)
 		if err != nil {
-			g.Errorln(err)
+			return
 		}
 		if err = json.Unmarshal(file, c); err != nil {
-			g.Errorln(err)
+			return
 		}
 	}
+	g.Debugln(c)
 }
 
 func SetUp() {

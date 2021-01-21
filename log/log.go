@@ -20,3 +20,9 @@ func InitLog2(mode int) {
 		g.SetOutput(os.Stderr)
 	}
 }
+
+func IsDebug(is bool) {
+	if !is {
+		g.SetLevel(g.LevelInfo)
+	}
+}
